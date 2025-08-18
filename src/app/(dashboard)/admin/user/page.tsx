@@ -1,7 +1,9 @@
+import UserManagement from './_components/user';
+
+export const metadata = {
+	title: 'POS Cafe | User Management',
+};
+
 export default function UserManagementPage() {
-	return (
-		<div>
-			<h1>usermanagement</h1>
-		</div>
-	);
+	return <UserManagement />;
 }
