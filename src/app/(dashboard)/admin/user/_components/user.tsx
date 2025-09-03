@@ -10,9 +10,12 @@ import useDataTable from '@/hooks/use-data-table';
 import { createClient } from '@/lib/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import { Pencil, Trash2 } from 'lucide-react';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import DialogCreateUser from './dialog-create-user';
+import { Profile } from '@/types/auth';
+import DialogUpdateUser from './dialog-update-user';
+import DialogDeleteUser from './dialog-delete-user';
 
 export default function UserManagement() {
 	const supabase = createClient();
@@ -47,6 +50,15 @@ export default function UserManagement() {
 		},
 	});
 
+	const [selectedAction, setSelectedAction] = useState<{
+		data: Profile;
+		type: 'update' | 'delete';
+	} | null>(null);
+
+	const handleChangeAction = (open: boolean) => {
+		if (!open) setSelectedAction(null);
+	};
+
 	const filteredData = useMemo(() => {
 		return (users?.data || []).map((user, index) => {
 			return [
@@ -59,22 +71,32 @@ export default function UserManagement() {
 					menu={[
 						{
 							label: (
-								<span className='flex item-center gap-2'>
+								<span className='flex gap-2 item-center'>
 									<Pencil />
 									Edit
 								</span>
 							),
-							action: () => {},
+							action: () => {
+								setSelectedAction({
+									data: user,
+									type: 'update',
+								});
+							},
 						},
 						{
 							label: (
-								<span className='flex item-center gap-2'>
+								<span className='flex gap-2 item-center'>
 									<Trash2 className='text-red-400' />
 									Delete
 								</span>
 							),
 							variant: 'destructive',
-							action: () => {},
+							action: () => {
+								setSelectedAction({
+									data: user,
+									type: 'delete',
+								});
+							},
 						},
 					]}
 				/>,
@@ -90,7 +112,7 @@ export default function UserManagement() {
 
 	return (
 		<div className='w-full'>
-			<div className='flex flex-col lg:flex-row mb-4 gap-2 justify-between w-full'>
+			<div className='flex flex-col justify-between w-full gap-2 mb-4 lg:flex-row'>
 				<h1 className='text-2xl font-bold'>User Management</h1>
 				<div className='flex gap-2'>
 					<Input
@@ -114,6 +136,18 @@ export default function UserManagement() {
 				currentLimit={currentLimit}
 				onChangePage={handleChangePage}
 				onChangeLimit={handleChangeLimit}
+			/>
+			<DialogUpdateUser
+				open={selectedAction !== null && selectedAction.type === 'update'}
+				refetch={refetch}
+				currentData={selectedAction?.data}
+				handleChangeAction={handleChangeAction}
+			/>
+			<DialogDeleteUser
+				open={selectedAction !== null && selectedAction.type === 'delete'}
+				refetch={refetch}
+				currentData={selectedAction?.data}
+				handleChangeAction={handleChangeAction}
 			/>
 		</div>
 	);
