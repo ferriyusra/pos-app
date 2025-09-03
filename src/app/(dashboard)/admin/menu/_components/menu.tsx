@@ -12,10 +12,11 @@ import { useQuery } from '@tanstack/react-query';
 import { Pencil, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
+import { Menu } from '@/validations/menu-validation';
 import Image from 'next/image';
 import { cn, convertIDR } from '@/lib/utils';
 import { HEADER_TABLE_MENU } from '@/constants/menu-constant';
-import { Menu } from '@/validations/menu-validation';
+import DialogCreateMenu from './dialog-create-menu';
 
 export default function MenuManagement() {
 	const supabase = createClient();
@@ -152,6 +153,7 @@ export default function MenuManagement() {
 						<DialogTrigger asChild>
 							<Button variant='outline'>Create</Button>
 						</DialogTrigger>
+						<DialogCreateMenu refetch={refetch} />
 					</Dialog>
 				</div>
 			</div>
