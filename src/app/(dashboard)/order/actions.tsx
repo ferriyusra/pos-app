@@ -66,3 +66,46 @@ export async function createOrder(
 		status: 'success',
 	};
 }
+
+export async function updateReservation(
+	prevState: OrderFormState,
+	formData: FormData
+) {
+	const supabase = await createClient();
+
+	const [orderResult, tableResult] = await Promise.all([
+		supabase
+			.from('orders')
+			.update({
+				status: formData.get('status'),
+			})
+			.eq('id', formData.get('id')),
+		supabase
+			.from('tables')
+			.update({
+				status:
+					formData.get('status') === 'process' ? 'unavailable' : 'available',
+			})
+			.eq('id', formData.get('table_id')),
+	]);
+
+	const orderError = orderResult.error;
+	const tableError = tableResult.error;
+
+	if (orderError || tableError) {
+		return {
+			status: 'error',
+			errors: {
+				...prevState.errors,
+				_form: [
+					...(orderError ? [orderError.message] : []),
+					...(tableError ? [tableError.message] : []),
+				],
+			},
+		};
+	}
+
+	return {
+		status: 'success',
+	};
+}
