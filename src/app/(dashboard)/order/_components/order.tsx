@@ -9,17 +9,13 @@ import { Input } from '@/components/ui/input';
 import useDataTable from '@/hooks/use-data-table';
 import { createClient } from '@/lib/supabase/client';
 import { useQuery } from '@tanstack/react-query';
-import { Pencil, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { Table } from '@/validations/table-validation';
-import { HEADER_TABLE_TABLE } from '@/constants/table-constant';
-import DialogCreateTable from './dialog-create-table';
-import DialogUpdateTable from './dialog-update-table';
-import DialogDeleteTable from './dialog-delete-table';
+import { HEADER_TABLE_ORDER } from '@/constants/order-constant';
 
-export default function TableManagement() {
+export default function OrderManagement() {
 	const supabase = createClient();
 	const {
 		currentPage,
@@ -30,28 +26,33 @@ export default function TableManagement() {
 		handleChangeSearch,
 	} = useDataTable();
 	const {
-		data: tables,
+		data: orders,
 		isLoading,
 		refetch,
 	} = useQuery({
-		queryKey: ['tables', currentPage, currentLimit, currentSearch],
+		queryKey: ['orders', currentPage, currentLimit, currentSearch],
 		queryFn: async () => {
 			const query = supabase
-				.from('tables')
-				.select('*', { count: 'exact' })
+				.from('orders')
+				.select(
+					`
+            id, order_id, customer_name, status, payment_url, tables (name, id)
+            `,
+					{ count: 'exact' }
+				)
 				.range((currentPage - 1) * currentLimit, currentPage * currentLimit - 1)
 				.order('created_at');
 
 			if (currentSearch) {
 				query.or(
-					`name.ilike.%${currentSearch}%,description.ilike.%${currentSearch}%,status.ilike.%${currentSearch}%`
+					`order_id.ilike.%${currentSearch}%,customer_name.ilike.%${currentSearch}%`
 				);
 			}
 
 			const result = await query;
 
 			if (result.error)
-				toast.error('Get Table data failed', {
+				toast.error('Get Order data failed', {
 					description: result.error.message,
 				});
 
@@ -69,69 +70,36 @@ export default function TableManagement() {
 	};
 
 	const filteredData = useMemo(() => {
-		return (tables?.data || []).map((table: Table, index) => {
+		return (orders?.data || []).map((order, index) => {
 			return [
 				currentLimit * (currentPage - 1) + index + 1,
-				<div>
-					<h4 className='font-bold'>{table.name}</h4>
-					<p className='text-xs'>{table.description}</p>
-				</div>,
-				table.capacity,
+				order.order_id,
+				order.customer_name,
+				(order.tables as unknown as { name: string }).name,
 				<div
 					className={cn('px-2 py-1 rounded-full text-white w-fit capitalize', {
-						'bg-green-600': table.status === 'available',
-						'bg-red-600': table.status === 'unavailable',
-						'bg-yellow-600': table.status === 'reserved',
+						'bg-lime-600': order.status === 'settled',
+						'bg-sky-600': order.status === 'process',
+						'bg-amber-600': order.status === 'reserved',
+						'bg-red-600': order.status === 'canceled',
 					})}>
-					{table.status}
+					{order.status}
 				</div>,
-				<DropdownAction
-					menu={[
-						{
-							label: (
-								<span className='flex item-center gap-2'>
-									<Pencil />
-									Edit
-								</span>
-							),
-							action: () => {
-								setSelectedAction({
-									data: table,
-									type: 'update',
-								});
-							},
-						},
-						{
-							label: (
-								<span className='flex item-center gap-2'>
-									<Trash2 className='text-red-400' />
-									Delete
-								</span>
-							),
-							variant: 'destructive',
-							action: () => {
-								setSelectedAction({
-									data: table,
-									type: 'delete',
-								});
-							},
-						},
-					]}
-				/>,
+				<DropdownAction menu={[]} />,
 			];
 		});
-	}, [tables]);
+	}, [orders]);
 
 	const totalPages = useMemo(() => {
-		return tables && tables.count !== null
-			? Math.ceil(tables.count / currentLimit)
+		return orders && orders.count !== null
+			? Math.ceil(orders.count / currentLimit)
 			: 0;
-	}, [tables]);
+	}, [orders]);
 
 	return (
 		<div className='w-full'>
 			<div className='flex flex-col lg:flex-row mb-4 gap-2 justify-between w-full'>
-				<h1 className='text-2xl font-bold'>Table Management</h1>
+				<h1 className='text-2xl font-bold'>Order Management</h1>
 				<div className='flex gap-2'>
 					<Input
 						placeholder='Search...'
@@ -141,12 +109,11 @@ export default function TableManagement() {
 						<DialogTrigger asChild>
 							<Button variant='outline'>Create</Button>
 						</DialogTrigger>
-						<DialogCreateTable refetch={refetch} />
 					</Dialog>
 				</div>
 			</div>
 			<DataTable
-				header={HEADER_TABLE_TABLE}
+				header={HEADER_TABLE_ORDER}
 				data={filteredData}
 				isLoading={isLoading}
 				totalPages={totalPages}
@@ -154,18 +121,6 @@ export default function TableManagement() {
 				currentLimit={currentLimit}
 				onChangePage={handleChangePage}
 				onChangeLimit={handleChangeLimit}
-			/>
-			<DialogUpdateTable
-				open={selectedAction !== null && selectedAction.type === 'update'}
-				refetch={refetch}
-				currentData={selectedAction?.data}
-				handleChangeAction={handleChangeAction}
-			/>
-			<DialogDeleteTable
-				open={selectedAction !== null && selectedAction.type === 'delete'}
-				refetch={refetch}
-				currentData={selectedAction?.data}
-				handleChangeAction={handleChangeAction}
 			/>
 		</div>
 	);
