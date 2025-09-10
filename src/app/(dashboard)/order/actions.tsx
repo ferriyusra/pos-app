@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { Cart, OrderFormState } from '@/types/order';
 import { orderFormSchema } from '@/validations/order-validation';
 import { redirect } from 'next/navigation';
+import { FormState } from '@/types/general';
 
 export async function createOrder(
 	prevState: OrderFormState,
@@ -134,4 +135,32 @@ export async function addOrderItem(
 	}
 
 	redirect(`/order/${data.order_id}`);
+}
+
+export async function updateStatusOrderitem(
+	prevState: FormState,
+	formData: FormData
+) {
+	const supabase = await createClient();
+
+	const { error } = await supabase
+		.from('orders_menus')
+		.update({
+			status: formData.get('status'),
+		})
+		.eq('id', formData.get('id'));
+
+	if (error) {
+		return {
+			status: 'error',
+			errors: {
+				...prevState,
+				_form: [error.message],
+			},
+		};
+	}
+
+	return {
+		status: 'success',
+	};
 }
